@@ -4,21 +4,24 @@ module Main
 
 import Options.Applicative
 
-import Cauterize.Crucible.TesterOpts
 import Cauterize.Crucible.Generate
 import Cauterize.Crucible.GenerateOpts
+import Cauterize.Crucible.Example
 import Cauterize.Crucible.ExampleOpts
+import Cauterize.Crucible.TesterOpts
 
 data Options = Options Command deriving (Show)
 data Command = GenerateCom GenerateOpts
+             | ExampleCom ExampleOpts
   deriving (Show)
 
 optParser :: Parser Options
 optParser = Options
   <$> subparser
-      ( command "generate"
-        ( info (fmap GenerateCom genOptions)
-          ( progDesc "Generate a random schema." ) )
+      ( command "generate" ( info (fmap GenerateCom genOptions)
+                           ( progDesc "Generate a random schema." ) )
+     <> command "example" ( info (fmap ExampleCom exampleOptions)
+                          ( progDesc "Generate a random binary example fitting a specification." ) )
       )
 
 options :: ParserInfo Options
@@ -30,3 +33,4 @@ main = do
   (Options c) <- execParser options
   case c of
     GenerateCom gOpts -> runGenerate gOpts
+    ExampleCom eOpts -> runExample eOpts
