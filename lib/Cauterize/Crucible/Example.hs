@@ -5,8 +5,11 @@ module Cauterize.Crucible.Example
 import qualified Cauterize.Crucible.ExampleOpts as OPT
 import qualified Cauterize.Specification as Spec
 import qualified Cauterize.Dynamic.Meta as DynMeta
+import qualified Cauterize.Dynamic.Meta.Pretty as P
 
 import qualified Data.ByteString.Lazy as B
+import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.IO as T
 
 import Numeric (showHex)
 import Data.List (intercalate)
@@ -28,6 +31,7 @@ schemaExample spec fmt = do
     OPT.FmtHex -> outputHex $ B.fromStrict b
     OPT.FmtCSV -> outputCSV $ B.fromStrict b
     OPT.FmtBinary -> outputBin $ B.fromStrict b
+    OPT.FmtString -> outputStr spec t
 
 outputHex :: B.ByteString -> IO ()
 outputHex bs = putStrLn $ concatMap showByte bs'
@@ -44,4 +48,7 @@ outputCSV bs = putStrLn $ intercalate "," $ map show bs'
     bs' = B.unpack bs
 
 outputBin :: B.ByteString -> IO ()
-outputBin bs = B.putStr bs
+outputBin = B.putStr
+
+outputStr :: Spec.Spec -> DynMeta.MetaType -> IO ()
+outputStr s t = T.putStrLn (P.dynamicMetaPretty s t)
