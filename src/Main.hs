@@ -24,8 +24,8 @@ optParser = Options
                            ( progDesc "Generate a random schema." ) )
      <> command "example" ( info (fmap ExampleCom exampleOptions)
                           ( progDesc "Generate a random binary example fitting a specification." ) )
-     <> command "test" ( info (fmap TesterCom testerOptions)
-                       ( progDesc "Test a code generator." ) )
+     <> command "tester" ( info (fmap TesterCom testerOptions)
+                         ( progDesc "Test a code generator." ) )
       )
 
 options :: ParserInfo Options
