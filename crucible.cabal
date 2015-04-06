@@ -22,12 +22,17 @@ library
                        cauterize,
                        text,
                        bytestring,
-                       optparse-applicative >=0.11.0.1
+                       optparse-applicative >=0.11.0.1,
+                       time,
+                       directory,
+                       process
   exposed-modules:     Cauterize.Crucible.Example,
                        Cauterize.Crucible.ExampleOpts,
+                       Cauterize.Crucible.FileSystem,
                        Cauterize.Crucible.Generate,
                        Cauterize.Crucible.GenerateOpts,
                        Cauterize.Crucible.Prototypes,
+                       Cauterize.Crucible.Tester,
                        Cauterize.Crucible.TesterOpts
 
 executable crucible

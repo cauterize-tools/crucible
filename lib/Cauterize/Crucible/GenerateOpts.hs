@@ -6,7 +6,7 @@ module Cauterize.Crucible.GenerateOpts
 import Options.Applicative
 
 import Cauterize.Crucible.Prototypes
-import qualified Data.Text as T
+import qualified Data.Text.Lazy as T
 
 data GenerateOpts = GenerateOpts
   { count :: Integer
