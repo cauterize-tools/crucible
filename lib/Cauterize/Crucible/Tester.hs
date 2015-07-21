@@ -17,10 +17,11 @@ import qualified Cauterize.Crucible.TesterOpts as OPT
 import qualified Cauterize.Dynamic.Meta as D
 import qualified Cauterize.Schema as SC
 import qualified Cauterize.Specification as SP
+import qualified Cauterize.CommonTypes as C
 import qualified Data.ByteString as B
 import qualified Data.List as L
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 
 data Context = Context
   { specificationPath :: T.Text
@@ -29,8 +30,6 @@ data Context = Context
 
 data BuildCmdOutput = BuildCmdOutput
   { buildCmdStr :: T.Text
-  , buildStdOut :: T.Text
-  , buildStdErr :: T.Text
   , buildExitCode :: ExitCode
   } deriving (Show)
 
@@ -72,10 +71,10 @@ runTester opts@OPT.TesterOpts { OPT.schemaCount = schemaCount
       -- Generate a schema. From this, also compile a specification file and a meta
       -- file. Write them to disk.
       schema <- aSchema schemaTypeCount schemaEncSize
-      let spec = SP.fromSchema schema
+      let spec = SP.mkSpecification schema
 
-      T.writeFile "schema.txt" $ SC.prettyPrint schema
-      T.writeFile "specification.txt" $ SP.prettyPrint spec
+      T.writeFile "schema.txt" $ SC.formatSchema schema
+      T.writeFile "specification.txt" $ SP.formatSpecification spec
 
       -- Construct a context with the paths to the specification and meta files
       -- along with the current directory.
@@ -127,6 +126,7 @@ expandCmd ctx cmd = repSpecPath . repDirPath $ cmd
 runDependentCommands :: [T.Text] -> IO [BuildCmdOutput]
 runDependentCommands [] = return []
 runDependentCommands (c:cmds) = do
+  putStrLn $ "Running command: " ++ T.unpack c
   c' <- runBuildCmd c
   if runWasSuccessful c'
     then liftM (c':) (runDependentCommands cmds)
@@ -140,19 +140,15 @@ runWasSuccessful BuildCmdOutput { buildExitCode = e } = e == ExitSuccess
 -- | Run the specified text as a build command. Package the outputs.
 runBuildCmd :: T.Text -> IO BuildCmdOutput
 runBuildCmd cmd = do
-  (_, Just stdoh, Just stdeh, ph) <- createProcess shelled
+  (_, _, _, ph) <- createProcess shelled
   e <- waitForProcess ph
-  stdo <- T.hGetContents stdoh
-  stde <- T.hGetContents stdeh
 
   return BuildCmdOutput { buildCmdStr = cmd
-                        , buildStdOut = stdo
-                        , buildStdErr = stde
                         , buildExitCode = e
                         }
   where
-    shelled = (shell $ T.unpack cmd) { std_out = CreatePipe
-                                     , std_err = CreatePipe
+    shelled = (shell $ T.unpack cmd) { std_out = Inherit
+                                     , std_err = Inherit
                                      }
 
 -- Tests the ability of an executable to transcode an instance of a type from
@@ -165,7 +161,7 @@ runBuildCmd cmd = do
 --
 -- TODO: come up with timeout mechanism.
 testCmdWithSchemaInstances :: T.Text  -- ^ the path to the exectuable to test
-                           -> SP.Spec -- ^ the specification from which to generate the instance
+                           -> SP.Specification -- ^ the specification from which to generate the instance
                            -> Integer -- ^ how many instances to test
                            -> IO [TestOutput]
 testCmdWithSchemaInstances _ _ 0 = return []
@@ -199,7 +195,7 @@ testCmdWithSchemaInstances cmd spec count = do
 -- Run a single test against a binary instance of a schema.
 runTest :: Handle -- ^ stdin of the process under test
         -> Handle -- ^ stdout of the process under test
-        -> SP.Spec -- ^ specification derived from the schema under test
+        -> SP.Specification -- ^ specification derived from the schema under test
         -> IO (TestResult, D.MetaType, B.ByteString)
 runTest ih oh spec = do
   -- Generate a type according to the specification, then pack it to binary.
@@ -209,7 +205,7 @@ runTest ih oh spec = do
   -- We keep this here as a sanity check. If this hits, it *IS* an error. We
   -- don't want to continue if this happens. Ever.
   let packedLen = fromIntegral $ B.length packed
-  let specMaxLen = SP.maxSize $ SP.specSize spec
+  let specMaxLen = C.sizeMax $ SP.specSize spec
   when (packedLen > (specMaxLen + fromIntegral hlen))
        (error $ "LENGTH OF BS TOO LONG! Expected "
              ++ show packedLen
@@ -257,21 +253,17 @@ runTest ih oh spec = do
 
   return (result, mt, packed)
   where
-    hlen = fromIntegral (SP.unTypeTagWidth $ SP.specTypeTagWidth spec)
-         + fromIntegral (SP.unLengthTagWidth $ SP.specLengthTagWidth spec)
+    hlen = fromIntegral (SP.specTypeLength spec)
+         + (fromIntegral . C.sizeMax . C.tagToSize . SP.specLengthTag) spec
 
 -- Output the result of a build command.
 printResult :: BuildCmdOutput -> IO ()
-printResult BuildCmdOutput { buildCmdStr = cs, buildStdOut = so, buildStdErr = se, buildExitCode = ec } =
+printResult BuildCmdOutput { buildCmdStr = cs, buildExitCode = ec } =
   case ec of
-    ExitSuccess -> T.putStrLn "SUCCESS"
+    ExitSuccess -> T.putStrLn "## SUCCESS"
     ExitFailure c -> do
-      T.putStrLn $ "FAILED: " `T.append` (T.pack . show) c
+      T.putStrLn $ "## FAILED: " `T.append` (T.pack . show) c
       T.putStrLn $ "## Command String: " `T.append` cs
-      T.putStrLn "## Standard output:"
-      T.putStr so
-      T.putStrLn "## Standard error:"
-      T.putStr se
 
 -- Do something pretty with a list of TestOutput types.
 renderResults :: [TestOutput] -> IO Int

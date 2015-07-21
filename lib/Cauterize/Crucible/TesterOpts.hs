@@ -7,7 +7,7 @@ import Cauterize.Crucible.Prototypes
 import Cauterize.Generate
 import Control.Monad (liftM)
 import Options.Applicative
-import qualified Data.Text.Lazy as T
+import qualified Data.Text as T
 
 data TesterOpts = TesterOpts
   { buildCmds :: [T.Text]

@@ -7,7 +7,8 @@ import Cauterize.Crucible.Prototypes
 import Cauterize.Generate
 
 import qualified Cauterize.Schema as SC
-import qualified Data.Text.Lazy.IO as T
+import qualified Cauterize.Schema.Checker as SC
+import qualified Data.Text.IO as T
 
 runGenerate :: OPT.GenerateOpts -> IO ()
 runGenerate (OPT.GenerateOpts typeCount encSize prototypes) = outputCaut prototypes typeCount encSize
@@ -19,5 +20,5 @@ outputCaut :: [PrototypeVariant] -- which prototypes to allow
 outputCaut ps tc es = do
   s <- generateSchemaWith tc es 0.95 ps
   case SC.checkSchema s of
-    [] -> T.putStrLn . SC.prettyPrint $ s
-    errors -> error $ "ERROR: " ++ show errors
+    Right cs -> T.putStrLn . SC.formatSchema $ cs
+    Left errors -> error $ "ERROR: " ++ show errors

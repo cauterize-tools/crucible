@@ -17,6 +17,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      lib
+  ghc-options:         -Wall -O2 -threaded
   default-language:    Haskell2010
   build-depends:       base < 5,
                        cauterize,

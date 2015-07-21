@@ -8,22 +8,21 @@ import qualified Cauterize.Dynamic.Meta as DynMeta
 import qualified Cauterize.Dynamic.Meta.Pretty as P
 
 import qualified Data.ByteString.Lazy as B
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text.IO as T
 
 import Numeric (showHex)
 import Data.List (intercalate)
 
 runExample :: OPT.ExampleOpts -> IO ()
 runExample (OPT.ExampleOpts spec fmt) = do
-  f <- Spec.parseFile spec
+  f <- Spec.parseSpecificationFromFile spec
   case f of
     Left e -> do
       putStrLn "Error parsing specification."
       print e
     Right spec' -> schemaExample spec' fmt
 
-schemaExample :: Spec.Spec -> OPT.Format -> IO ()
+schemaExample :: Spec.Specification -> OPT.Format -> IO ()
 schemaExample spec fmt = do
   t <- DynMeta.dynamicMetaGen spec
   let b = DynMeta.dynamicMetaPack spec t
@@ -50,5 +49,5 @@ outputCSV bs = putStrLn $ intercalate "," $ map show bs'
 outputBin :: B.ByteString -> IO ()
 outputBin = B.putStr
 
-outputStr :: Spec.Spec -> DynMeta.MetaType -> IO ()
+outputStr :: Spec.Specification -> DynMeta.MetaType -> IO ()
 outputStr s t = T.putStrLn (P.dynamicMetaPretty s t)
