@@ -235,13 +235,17 @@ runTest ih oh spec = do
                 payload <- B.hGet oh (fromIntegral . D.metaLength $ mh)
 
                 -- Try to unpack the types from the payload bytes.
-                return $ case D.dynamicMetaUnpackFromHeader spec mh payload of
-                          Left str -> TestError { testErrorMessage = str }
-                          Right (mt', rest ) | not (B.null rest) -> TestError { testErrorMessage =
-                                                                      "Not all bytes were consumed: " `T.append` (T.pack . show . B.unpack) rest }
-                                             | otherwise -> if mt /= mt'
-                                                              then TestFail
-                                                              else TestPass
+                case D.dynamicMetaUnpackFromHeader spec mh payload of
+                 Left str -> return TestError { testErrorMessage = str }
+                 Right (mt', rest ) | not (B.null rest) -> return TestError { testErrorMessage =
+                                                             "Not all bytes were consumed: " `T.append` (T.pack . show . B.unpack) rest }
+                                    | otherwise -> if mt == mt'
+                                                     then return TestPass
+                                                     else do
+                                                       putStrLn "## Unexpected type."
+                                                       putStrLn $ "## Expected: " ++ show mt
+                                                       putStrLn $ "## Actual: " ++ show mt'
+                                                       return TestFail
   -- Make sure the encoding thread is finished.
   _ <- takeMVar encodeDone
 
