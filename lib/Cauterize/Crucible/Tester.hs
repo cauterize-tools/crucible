@@ -168,6 +168,11 @@ testCmdWithSchemaInstances _ _ 0 = return []
 testCmdWithSchemaInstances cmd spec count = do
   -- Create the process. Grab its stdin and stdout.
   (Just stdih, Just stdoh, Just stdeh, ph) <- createProcess shelled
+
+  hSetBuffering stdih NoBuffering
+  hSetBuffering stdoh NoBuffering
+  hSetBuffering stdeh NoBuffering
+
   (result, unpacked, packed) <- runTest stdih stdoh spec
 
   -- Wait for the process to terminate, collect the result of stdout, package
@@ -283,10 +288,11 @@ renderResults rs = go rs 0
                                               TestError m -> printErr m >> go rest (failures + 1)
                                               TestFail -> printFail >> go rest (failures + 1)
       where
-        printErr m = do T.putStrLn $ "Error: " `T.append` m
-                        T.putStrLn $ "Error encoded bytes: " `T.append` (T.pack . show . B.unpack) b
-                        T.putStrLn $ "Standard error output: " `T.append` e
-                        T.putStrLn $ "Show metatype: " `T.append` (T.pack . show) mt
-        printFail = do T.putStrLn $ "Failure for encoded bytes: " `T.append` (T.pack . show . B.unpack) b
-                       T.putStrLn $ "Standard error output: " `T.append` e
-                       T.putStrLn $ "Show metatype: " `T.append` (T.pack . show) mt
+        t1000 = T.take 1000
+        printErr m = do T.putStrLn $ "Error: " `T.append` (t1000 m)
+                        T.putStrLn $ "Error encoded bytes: " `T.append` (t1000 $ (T.pack . show . B.unpack) b)
+                        T.putStrLn $ "Standard error output: " `T.append` (t1000 e)
+                        T.putStrLn $ "Show metatype: " `T.append` (t1000 $ (T.pack . show) mt)
+        printFail = do T.putStrLn $ "Failure for encoded bytes: " `T.append` (t1000 $ (T.pack . show . B.unpack) b)
+                       T.putStrLn $ "Standard error output: " `T.append` (t1000 e)
+                       T.putStrLn $ "Show metatype: " `T.append` (t1000 ((T.pack . show) mt))
